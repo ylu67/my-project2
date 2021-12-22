@@ -1,0 +1,55 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: |
+  This cloud formation template is for running kittens
+   carausel static website on EC2 on amazon Linux 2 (ami-0ed9277fb7eb570c9) EC2 instance with 
+   custom sec. group with allows http conncections on port 80 ans ssh port 22. 
+   We will connect to apache Web server  
+  
+Resources:
+  webserversecgroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable HTTP for Apache Web Server # Required           
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+
+  WebServerHost:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-0ed9277fb7eb570c9
+      InstanceType: t2.micro
+      KeyName: firstkey
+      SecurityGroupIds:
+        - !Ref webserversecgroup
+      Tags:
+        - Key: Name
+          Value: !Sub Web Server of ${AWS::StackName} Stack 
+      UserData:
+        Fn::Base64:
+          !Sub |
+            #! bin/bash
+            yum update -y
+            yum install httpd -y 
+            FOLDER="https://raw.githubusercontent.com/ylu67/my-project2/main/AWS/projects/Project-101-kittens-carousel-static-website-ec2/static-web"
+            cd /var/www/html
+            wget $FOLDER/index.html
+            wget $FOLDER/cat0.jpg
+            wget $FOLDER/cat1.jpg
+            wget $FOLDER/cat2.jpg
+            wget $FOLDER/cat3.jpg
+            systemctl start httpd
+            systemctl enable httpd
+
+Outputs:
+  WebsiteURL:
+    Value: !Sub
+      - http://${PublicAddress}
+      - PublicAddress: !GetAtt WebServerHost.PublicDnsName
+    Description: Kittens Carausel Application URL 
